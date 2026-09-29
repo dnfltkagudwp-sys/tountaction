@@ -1,0 +1,231 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(Health))]
+public class ChargerEnemy : MonoBehaviour
+{
+    public enum State { Idle, Windup, Charge, Recover, Stunned }
+
+    [Header("Targeting")]
+    [SerializeField] Transform target;
+    [Tooltip("Prototype-only: start attacking when the target is in range without needing a taunt.")]
+    [SerializeField] bool autoAggro = true;
+    [SerializeField] float aggroRange = 14f;
+
+    [Header("Windup (telegraph)")]
+    [SerializeField] float windupTime = 1.0f;
+    [SerializeField] float windupTurnSpeed = 360f;
+    [Tooltip("Charge direction locks this many seconds before the charge starts.")]
+    [SerializeField] float aimLockTime = 0.3f;
+
+    [Header("Charge")]
+    [SerializeField] float chargeSpeed = 18f;
+    [SerializeField] float chargeDistance = 12f;
+    [SerializeField] float hitRadius = 0.9f;
+    [SerializeField] float chargeDamage = 1f;
+
+    [Header("Recovery")]
+    [SerializeField] float recoverTime = 0.7f;
+    [SerializeField] float wallStunTime = 1.2f;
+    [SerializeField] float idleCooldown = 0.3f;
+
+    [Header("Arena")]
+    [SerializeField] float arenaHalfExtent = 15f;
+    [SerializeField] float bodyRadius = 0.5f;
+
+    [Header("Debug colors")]
+    [SerializeField] Color idleColor = new Color(0.55f, 0.25f, 0.25f);
+    [SerializeField] Color windupColor = new Color(1f, 0.85f, 0.2f);
+    [SerializeField] Color chargeColor = new Color(1f, 0.15f, 0.1f);
+    [SerializeField] Color recoverColor = new Color(0.3f, 0.15f, 0.15f);
+    [SerializeField] Color stunColor = new Color(0.3f, 0.5f, 1f);
+
+    public State Current { get; private set; } = State.Idle;
+
+    float stateTimer;
+    float traveled;
+    Vector3 chargeDir;
+    Health health;
+    Renderer bodyRenderer;
+    Material bodyMat;
+    Transform lane;
+    Material laneMat;
+    readonly HashSet<Object> hitThisCharge = new HashSet<Object>();
+
+    public void SetTarget(Transform t) => target = t;
+
+    void Awake()
+    {
+        bodyRenderer = GetComponent<Renderer>();
+        bodyMat = bodyRenderer.material;
+        health = GetComponent<Health>();
+        health.Died += OnDied;
+        BuildLane();
+    }
+
+    void OnDestroy()
+    {
+        if (health != null) health.Died -= OnDied;
+    }
+
+    void OnDied(Health _)
+    {
+        enabled = false;
+        lane.gameObject.SetActive(false);
+        SetBodyColor(new Color(0.1f, 0.1f, 0.1f));
+    }
+
+    void Start()
+    {
+        if (target == null)
+        {
+            var p = FindAnyObjectByType<PlayerMotor>();
+            if (p != null) target = p.transform;
+        }
+        EnterState(State.Idle, idleCooldown);
+    }
+
+    void Update()
+    {
+        stateTimer -= Time.deltaTime;
+
+        switch (Current)
+        {
+            case State.Idle: UpdateIdle(); break;
+            case State.Windup: UpdateWindup(); break;
+            case State.Charge: UpdateCharge(); break;
+            case State.Recover:
+            case State.Stunned:
+                if (stateTimer <= 0f) EnterState(State.Idle, idleCooldown);
+                break;
+        }
+    }
+
+    // ---- States -----------------------------------------------------------
+
+    void UpdateIdle()
+    {
+        if (stateTimer > 0f || target == null || !autoAggro) return;
+        if (FlatDistanceTo(target.position) <= aggroRange)
+            EnterState(State.Windup, windupTime);
+    }
+
+    void UpdateWindup()
+    {
+        float untilLock = stateTimer - aimLockTime;
+        if (untilLock > 0f && target != null)
+        {
+            Vector3 to = Flat(target.position - transform.position);
+            if (to.sqrMagnitude > 0.0001f)
+            {
+                Quaternion want = Quaternion.LookRotation(to, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, want, windupTurnSpeed * Time.deltaTime);
+            }
+        }
+
+        float t = 1f - Mathf.Clamp01(stateTimer / windupTime);
+        laneMat.SetColor("_BaseColor", Color.Lerp(new Color(0.35f, 0.1f, 0.1f), new Color(1f, 0.1f, 0.05f), t));
+
+        if (stateTimer <= 0f) EnterState(State.Charge, 0f);
+    }
+
+    void UpdateCharge()
+    {
+        float step = chargeSpeed * Time.deltaTime;
+        Vector3 pos = transform.position + chargeDir * step;
+
+        float limit = arenaHalfExtent - bodyRadius;
+        bool hitWall = false;
+        if (Mathf.Abs(pos.x) > limit) { pos.x = Mathf.Clamp(pos.x, -limit, limit); hitWall = true; }
+        if (Mathf.Abs(pos.z) > limit) { pos.z = Mathf.Clamp(pos.z, -limit, limit); hitWall = true; }
+
+        traveled += (pos - transform.position).magnitude;
+        transform.position = pos;
+
+        DetectHits();
+
+        if (hitWall) EnterState(State.Stunned, wallStunTime);
+        else if (traveled >= chargeDistance) EnterState(State.Recover, recoverTime);
+    }
+
+    void EnterState(State next, float duration)
+    {
+        Current = next;
+        stateTimer = duration;
+
+        lane.gameObject.SetActive(next == State.Windup);
+
+        switch (next)
+        {
+            case State.Idle: SetBodyColor(idleColor); break;
+            case State.Windup: SetBodyColor(windupColor); break;
+            case State.Charge:
+                SetBodyColor(chargeColor);
+                chargeDir = Flat(transform.forward).normalized;
+                traveled = 0f;
+                hitThisCharge.Clear();
+                break;
+            case State.Recover: SetBodyColor(recoverColor); break;
+            case State.Stunned: SetBodyColor(stunColor); break;
+        }
+    }
+
+    // ---- Hit detection (explicit, no rigidbody physics) -------------------
+
+    void DetectHits()
+    {
+        var cols = Physics.OverlapSphere(transform.position, hitRadius);
+        foreach (var c in cols)
+        {
+            var victim = c.GetComponentInParent<Health>();
+            if (victim == null || victim == health || victim.IsDead) continue;
+            if (!hitThisCharge.Add(victim)) continue;
+
+            victim.TakeDamage(new DamageInfo(chargeDamage, gameObject, chargeDir));
+        }
+    }
+
+    // ---- Helpers ----------------------------------------------------------
+
+    void BuildLane()
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = "ChargeLane";
+        Destroy(go.GetComponent<Collider>());
+        lane = go.transform;
+        lane.SetParent(transform, false);
+        lane.localPosition = new Vector3(0f, -0.97f, chargeDistance * 0.5f);
+        lane.localScale = new Vector3(hitRadius * 2f, 0.02f, chargeDistance);
+
+        laneMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        go.GetComponent<Renderer>().sharedMaterial = laneMat;
+        go.SetActive(false);
+    }
+
+    void SetBodyColor(Color c) => bodyMat.SetColor("_BaseColor", c);
+
+    static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
+
+    float FlatDistanceTo(Vector3 p) => Flat(p - transform.position).magnitude;
+
+    void OnValidate()
+    {
+        if (lane != null)
+        {
+            lane.localPosition = new Vector3(0f, -0.97f, chargeDistance * 0.5f);
+            lane.localScale = new Vector3(hitRadius * 2f, 0.02f, chargeDistance);
+        }
+    }
+
+#if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 1.8f, Current.ToString());
+        if (Current == State.Charge)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(transform.position, hitRadius);
+        }
+    }
+#endif
+}
