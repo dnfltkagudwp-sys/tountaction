@@ -10,12 +10,27 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [SerializeField] Transform target;
 
     [Header("Natural attack (pressure)")]
-    [Tooltip("Attack on its own every few seconds without a taunt. OFF while verifying the taunt loop.")]
-    [SerializeField] bool naturalAttackEnabled = false;
+    [Tooltip("Attack on its own every few seconds without a taunt. Turn OFF to verify the pure taunt loop.")]
+    [SerializeField] bool naturalAttackEnabled = true;
     [SerializeField] float naturalIntervalMin = 4f;
     [SerializeField] float naturalIntervalMax = 6f;
     [Tooltip("Natural attacks only start when the target is within this range.")]
     [SerializeField] float aggroRange = 14f;
+
+    [Header("Repositioning (while Idle)")]
+    [SerializeField] bool repositionEnabled = true;
+    [SerializeField] float moveSpeed = 3.5f;
+    [Tooltip("Keep the target between these distances: approach beyond max, back off inside min, circle in between.")]
+    [SerializeField] float keepDistanceMin = 6f;
+    [SerializeField] float keepDistanceMax = 10f;
+    [Tooltip("Push away from other enemies closer than this.")]
+    [SerializeField] float separationRadius = 3f;
+    [SerializeField] float idleTurnSpeed = 240f;
+
+    [Header("Contact damage")]
+    [Tooltip("Touching this enemy outside a charge hurts the player (not other enemies).")]
+    [SerializeField] float contactDamage = 1f;
+    [SerializeField] float contactRadius = 1.0f;
 
     [Header("Taunt")]
     [SerializeField] Color tauntRingColor = new Color(1f, 0.2f, 0.9f);
@@ -71,8 +86,12 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     // From an accepted taunt until that taunted charge is over (drives the ring).
     bool tauntActive;
 
+    float orbitSign = 1f;
+
     public bool CanBeTaunted => enabled && !health.IsDead;
     public bool IsTaunted => tauntActive;
+    /// <summary>Seconds until the next natural attack may start; negative when off or not idle.</summary>
+    public float NaturalTimeRemaining => naturalAttackEnabled && Current == State.Idle ? Mathf.Max(0f, naturalTimer) : -1f;
 
     public void SetTarget(Transform t) => target = t;
 
@@ -144,12 +163,16 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             var p = FindAnyObjectByType<PlayerMotor>();
             if (p != null) target = p.transform;
         }
-        EnterState(State.Idle, idleCooldown);
+        orbitSign = Random.value < 0.5f ? -1f : 1f;
+        // A taunt can arrive before Start; don't overwrite it.
+        if (!tauntActive) EnterState(State.Idle, idleCooldown);
     }
 
     void Update()
     {
         stateTimer -= Time.deltaTime;
+
+        if (Current != State.Charge) ApplyContactDamage();
 
         switch (Current)
         {
@@ -178,9 +201,69 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             return;
         }
 
+        if (repositionEnabled) Reposition();
+
         if (!naturalAttackEnabled || stateTimer > 0f || naturalTimer > 0f || target == null) return;
         if (FlatDistanceTo(target.position) <= aggroRange)
             EnterState(State.Windup, windupTime);
+    }
+
+    /// <summary>Hold a distance band around the target, circling inside it, while staying apart from other enemies.</summary>
+    void Reposition()
+    {
+        if (target == null) return;
+
+        Vector3 to = Flat(target.position - transform.position);
+        float dist = to.magnitude;
+        if (dist < 0.001f) return;
+        Vector3 toDir = to / dist;
+
+        float radial = dist > keepDistanceMax ? 1f : dist < keepDistanceMin ? -1f : 0f;
+        Vector3 tangent = Vector3.Cross(Vector3.up, toDir) * orbitSign;
+        Vector3 move = toDir * radial + tangent * (radial == 0f ? 1f : 0.5f);
+
+        foreach (var other in TauntRegistry.All)
+        {
+            if (ReferenceEquals(other, this) || other as Object == null) continue;
+            Vector3 away = Flat(transform.position - other.transform.position);
+            float d = away.magnitude;
+            if (d < separationRadius && d > 0.001f)
+                move += away / d * (1f - d / separationRadius) * 2f;
+        }
+
+        if (move.sqrMagnitude > 1f) move.Normalize();
+        Vector3 pos = transform.position + move * moveSpeed * Time.deltaTime;
+
+        float limit = arenaHalfExtent - bodyRadius;
+        if (Mathf.Abs(pos.x) > limit || Mathf.Abs(pos.z) > limit)
+        {
+            pos.x = Mathf.Clamp(pos.x, -limit, limit);
+            pos.z = Mathf.Clamp(pos.z, -limit, limit);
+            orbitSign = -orbitSign; // circle the other way instead of grinding along the wall
+        }
+        transform.position = pos;
+
+        // Keep facing the target so the next windup reads clearly.
+        Quaternion want = Quaternion.LookRotation(toDir, Vector3.up);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, want, idleTurnSpeed * Time.deltaTime);
+    }
+
+    // ---- Contact damage ---------------------------------------------------
+
+    void ApplyContactDamage()
+    {
+        if (contactDamage <= 0f) return;
+        var cols = Physics.OverlapSphere(transform.position, contactRadius);
+        foreach (var c in cols)
+        {
+            var victim = c.GetComponentInParent<Health>();
+            if (victim == null || victim == health || victim.IsDead) continue;
+            // Enemies don't hurt each other by touching; only charges do.
+            if (victim.GetComponent<ITauntable>() != null) continue;
+
+            Vector3 dir = Flat(victim.transform.position - transform.position).normalized;
+            victim.TakeDamage(new DamageInfo(contactDamage, gameObject, dir));
+        }
     }
 
     void UpdateWindup()

@@ -363,6 +363,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 3
+  hitInvulnerableTime: 1
+  blinkInterval: 0.08
   destroyOnDeath: 0
   destroyDelay: 0.4
   showLabel: 1
@@ -380,6 +382,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerTaunt
   range: 14
+  cursorSnapRadius: 2
   halfAngle: 30
   angleTieTolerance: 1
   cooldown: 1
@@ -993,6 +996,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1314701243}
   - component: {fileID: 1314701242}
+  - component: {fileID: 1314701244}
   m_Layer: 0
   m_Name: GameFlow
   m_TagString: Untagged
@@ -1028,6 +1032,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1314701244
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1314701241}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1634c91377f51144c994808f8b85db6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DebugHud
+  show: 1
+  position: {x: 10, y: 30}
 --- !u!1 &1401941099
 GameObject:
   m_ObjectHideFlags: 0
@@ -1062,6 +1080,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 2
+  hitInvulnerableTime: 0
+  blinkInterval: 0.08
   destroyOnDeath: 1
   destroyDelay: 0.4
   showLabel: 1
@@ -1079,10 +1099,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChargerEnemy
   target: {fileID: 267090364}
-  naturalAttackEnabled: 0
+  naturalAttackEnabled: 1
   naturalIntervalMin: 4
   naturalIntervalMax: 6
   aggroRange: 14
+  repositionEnabled: 1
+  moveSpeed: 3.5
+  keepDistanceMin: 6
+  keepDistanceMax: 10
+  separationRadius: 3
+  idleTurnSpeed: 240
+  contactDamage: 1
+  contactRadius: 1
   tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
   tauntRingRadius: 1.1
   windupTime: 1
@@ -1345,10 +1373,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChargerEnemy
   target: {fileID: 267090364}
-  naturalAttackEnabled: 0
+  naturalAttackEnabled: 1
   naturalIntervalMin: 4
   naturalIntervalMax: 6
   aggroRange: 14
+  repositionEnabled: 1
+  moveSpeed: 3.5
+  keepDistanceMin: 6
+  keepDistanceMax: 10
+  separationRadius: 3
+  idleTurnSpeed: 240
+  contactDamage: 1
+  contactRadius: 1
   tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
   tauntRingRadius: 1.1
   windupTime: 1
@@ -1478,6 +1514,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 2
+  hitInvulnerableTime: 0
+  blinkInterval: 0.08
   destroyOnDeath: 1
   destroyDelay: 0.4
   showLabel: 1

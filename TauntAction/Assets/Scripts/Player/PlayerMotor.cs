@@ -37,6 +37,7 @@ public class PlayerMotor : MonoBehaviour
     public Vector3 Velocity { get; private set; }
     public bool IsDashing => dashTimer > 0f;
     public bool IsInvulnerable => iFrameTimer > 0f;
+    public float DashCooldownRemaining => Mathf.Max(0f, cooldownTimer);
 
     void Awake()
     {
