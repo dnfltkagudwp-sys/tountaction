@@ -32,6 +32,9 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [SerializeField] float chargeDistance = 12f;
     [SerializeField] float hitRadius = 0.9f;
     [SerializeField] float chargeDamage = 1f;
+    [Tooltip("Hitting another enemy ends the charge on the spot (like a wall) instead of passing through.")]
+    [SerializeField] bool stopOnEnemyHit = true;
+    [SerializeField] float enemyHitStunTime = 1.0f;
 
     [Header("Recovery")]
     [SerializeField] float recoverTime = 0.7f;
@@ -212,9 +215,10 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         traveled += (pos - transform.position).magnitude;
         transform.position = pos;
 
-        DetectHits();
+        bool hitEnemy = DetectHits();
 
-        if (hitWall) EnterState(State.Stunned, wallStunTime);
+        if (hitEnemy && stopOnEnemyHit) EnterState(State.Stunned, enemyHitStunTime);
+        else if (hitWall) EnterState(State.Stunned, wallStunTime);
         else if (traveled >= chargeDistance) EnterState(State.Recover, recoverTime);
     }
 
@@ -250,8 +254,10 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
 
     // ---- Hit detection (explicit, no rigidbody physics) -------------------
 
-    void DetectHits()
+    /// <summary>Returns true if another enemy (anything tauntable) was hit this frame.</summary>
+    bool DetectHits()
     {
+        bool hitEnemy = false;
         var cols = Physics.OverlapSphere(transform.position, hitRadius);
         foreach (var c in cols)
         {
@@ -260,7 +266,9 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             if (!hitThisCharge.Add(victim)) continue;
 
             victim.TakeDamage(new DamageInfo(chargeDamage, gameObject, chargeDir));
+            if (victim.GetComponent<ITauntable>() != null) hitEnemy = true;
         }
+        return hitEnemy;
     }
 
     // ---- Helpers ----------------------------------------------------------

@@ -3,13 +3,16 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Left click taunts the enemy that best matches the mouse direction:
-/// within range and the aim cone, smallest angle first, then nearest.
+/// Left click taunts an enemy within range:
+/// first the enemy closest to the mouse cursor (if one is near it),
+/// otherwise the one best matching the mouse direction (smallest angle, then nearest).
 /// </summary>
 public class PlayerTaunt : MonoBehaviour
 {
     [Header("Targeting")]
     [SerializeField] float range = 14f;
+    [Tooltip("An enemy within this distance of the cursor's floor point is picked directly (closest to the cursor wins).")]
+    [SerializeField] float cursorSnapRadius = 2f;
     [Tooltip("Half of the aim cone, in degrees (30 = 60° cone).")]
     [SerializeField] float halfAngle = 30f;
     [Tooltip("Angles closer than this count as equal; the nearer enemy wins.")]
@@ -38,6 +41,9 @@ public class PlayerTaunt : MonoBehaviour
     const int ConeArcSegments = 16;
 
     public ITauntable Candidate { get; private set; }
+    /// <summary>The cursor's point on the floor (valid while HasAim).</summary>
+    public Vector3 AimPoint { get; private set; }
+    public bool HasAim { get; private set; }
     public float CooldownRemaining => Mathf.Max(0f, cooldownTimer);
 
     void Awake()
@@ -68,8 +74,10 @@ public class PlayerTaunt : MonoBehaviour
     {
         cooldownTimer -= Time.deltaTime;
 
-        bool hasAim = TryGetAimDirection(out Vector3 aimDir);
-        Candidate = hasAim ? FindTarget(aimDir) : null;
+        bool hasAim = TryGetAim(out Vector3 aimPoint, out Vector3 aimDir);
+        HasAim = hasAim;
+        AimPoint = aimPoint;
+        Candidate = hasAim ? FindTarget(aimPoint, aimDir) : null;
 
         // A click with no candidate does not spend the cooldown.
         if (Candidate != null && cooldownTimer <= 0f && TauntPressed())
@@ -83,8 +91,9 @@ public class PlayerTaunt : MonoBehaviour
 
     // ---- Targeting --------------------------------------------------------
 
-    bool TryGetAimDirection(out Vector3 dir)
+    bool TryGetAim(out Vector3 point, out Vector3 dir)
     {
+        point = transform.position;
         dir = transform.forward;
         var mouse = Mouse.current;
         if (mouse == null || aimCamera == null) return false;
@@ -93,13 +102,40 @@ public class PlayerTaunt : MonoBehaviour
         var floor = new Plane(Vector3.up, Vector3.zero);
         if (!floor.Raycast(ray, out float t)) return false;
 
-        dir = Flat(ray.GetPoint(t) - transform.position);
+        point = ray.GetPoint(t);
+        dir = Flat(point - transform.position);
         if (dir.sqrMagnitude < 0.0001f) return false;
         dir.Normalize();
         return true;
     }
 
-    ITauntable FindTarget(Vector3 aimDir)
+    ITauntable FindTarget(Vector3 aimPoint, Vector3 aimDir)
+    {
+        // Pointing right at an enemy beats direction, so stacked enemies stay selectable.
+        return FindNearCursor(aimPoint) ?? FindInCone(aimDir);
+    }
+
+    ITauntable FindNearCursor(Vector3 aimPoint)
+    {
+        ITauntable best = null;
+        float bestDist = cursorSnapRadius;
+
+        foreach (var t in TauntRegistry.All)
+        {
+            if (t as Object == null || !t.CanBeTaunted) continue;
+            if (Flat(t.transform.position - transform.position).magnitude > range) continue;
+
+            float d = Flat(t.transform.position - aimPoint).magnitude;
+            if (d <= bestDist)
+            {
+                best = t;
+                bestDist = d;
+            }
+        }
+        return best;
+    }
+
+    ITauntable FindInCone(Vector3 aimDir)
     {
         ITauntable best = null;
         float bestAngle = float.MaxValue;
