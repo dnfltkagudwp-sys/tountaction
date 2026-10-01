@@ -113,6 +113,7 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
     public bool IsLaneBlocked => laneBlocked;
     /// <summary>Seconds until the next natural attack may start; negative when off or not idle.</summary>
     public float NaturalTimeRemaining => naturalAttackEnabled && Current == State.Idle ? Mathf.Max(0f, naturalTimer) : -1f;
+    protected float AimLockTime => aimLockTime;
     /// <summary>State name for debug readouts (subclasses can rename Attack, e.g. "Charge").</summary>
     public virtual string StateLabel => Current.ToString();
 
