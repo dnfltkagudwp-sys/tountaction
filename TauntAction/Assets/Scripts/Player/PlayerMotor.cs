@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,40 +9,155 @@ public class PlayerMotor : MonoBehaviour
     [SerializeField] float moveSpeed = 9f;
     [SerializeField] float turnSpeed = 720f;
 
+    [Header("Dash")]
+    [SerializeField] float dashSpeed = 25f;
+    [SerializeField] float dashDuration = 0.18f;
+    [SerializeField] float dashCooldown = 0.6f;
+    [Tooltip("Invulnerable for this many seconds from the start of the dash.")]
+    [SerializeField] float iFrameDuration = 0.12f;
+    [Tooltip("While dashing, ignore collisions with anything that has Health (enemies). Walls still block.")]
+    [SerializeField] bool passThroughEnemies = true;
+    [SerializeField] Color iFrameColor = new Color(0.6f, 0.9f, 1f);
+
     [Header("Reference")]
     [Tooltip("Movement directions are relative to this camera's yaw. Falls back to Camera.main.")]
     [SerializeField] Transform cameraReference;
 
     CharacterController controller;
+    Health health;
+    Material bodyMat;
+    Color baseColor;
+
+    float dashTimer;
+    float cooldownTimer;
+    float iFrameTimer;
+    Vector3 dashDir;
+    readonly List<Collider> ignoredColliders = new List<Collider>();
 
     public Vector3 Velocity { get; private set; }
+    public bool IsDashing => dashTimer > 0f;
+    public bool IsInvulnerable => iFrameTimer > 0f;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
-        var health = GetComponent<Health>();
+        health = GetComponent<Health>();
         if (health != null) health.Died += _ => enabled = false;
         if (cameraReference == null && Camera.main != null)
             cameraReference = Camera.main.transform;
+
+        var r = GetComponent<Renderer>();
+        if (r != null)
+        {
+            bodyMat = r.material;
+            baseColor = bodyMat.GetColor("_BaseColor");
+        }
+    }
+
+    void OnDisable()
+    {
+        // Covers death mid-dash: never leave i-frames or ignored collisions behind.
+        EndIFrames();
+        EndDash();
     }
 
     void Update()
     {
+        float dt = Time.deltaTime;
+        cooldownTimer -= dt;
+
         Vector2 input = ReadMoveInput();
         if (input.sqrMagnitude > 1f) input.Normalize();
-
         Vector3 dir = CameraRelative(input);
+
+        if (!IsDashing && cooldownTimer <= 0f && DashPressed())
+            StartDash(dir);
+
+        if (iFrameTimer > 0f)
+        {
+            iFrameTimer -= dt;
+            if (iFrameTimer <= 0f) EndIFrames();
+        }
+
+        if (IsDashing)
+        {
+            // Direction is locked for the whole dash.
+            Velocity = dashDir * dashSpeed;
+            controller.Move(Velocity * dt + Vector3.down * 0.01f);
+
+            dashTimer -= dt;
+            if (dashTimer <= 0f) EndDash();
+            return;
+        }
+
         Velocity = dir * moveSpeed;
 
         // Keep the player pinned to the floor plane.
-        controller.Move(Velocity * Time.deltaTime + Vector3.down * 0.01f);
+        controller.Move(Velocity * dt + Vector3.down * 0.01f);
 
         if (dir.sqrMagnitude > 0.0001f)
         {
             Quaternion target = Quaternion.LookRotation(dir, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeed * dt);
         }
     }
+
+    // ---- Dash -------------------------------------------------------------
+
+    void StartDash(Vector3 inputDir)
+    {
+        // Input direction first; with no input, dash where the player is facing.
+        dashDir = inputDir.sqrMagnitude > 0.0001f ? inputDir.normalized : Flat(transform.forward).normalized;
+        transform.rotation = Quaternion.LookRotation(dashDir, Vector3.up);
+
+        dashTimer = dashDuration;
+        cooldownTimer = dashCooldown;
+
+        if (iFrameDuration > 0f)
+        {
+            iFrameTimer = iFrameDuration;
+            if (health != null) health.Invulnerable = true;
+            if (bodyMat != null) bodyMat.SetColor("_BaseColor", iFrameColor);
+        }
+
+        if (passThroughEnemies) IgnoreEnemyCollisions();
+    }
+
+    void EndDash()
+    {
+        dashTimer = 0f;
+        foreach (var c in ignoredColliders)
+            if (c != null) Physics.IgnoreCollision(controller, c, false);
+        ignoredColliders.Clear();
+    }
+
+    void EndIFrames()
+    {
+        iFrameTimer = 0f;
+        if (health != null) health.Invulnerable = false;
+        if (bodyMat != null) bodyMat.SetColor("_BaseColor", baseColor);
+    }
+
+    void IgnoreEnemyCollisions()
+    {
+        foreach (var h in FindObjectsByType<Health>())
+        {
+            if (h == health) continue;
+            foreach (var c in h.GetComponentsInChildren<Collider>())
+            {
+                Physics.IgnoreCollision(controller, c, true);
+                ignoredColliders.Add(c);
+            }
+        }
+    }
+
+    static bool DashPressed()
+    {
+        var kb = Keyboard.current;
+        return kb != null && kb.spaceKey.wasPressedThisFrame;
+    }
+
+    static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
     static Vector2 ReadMoveInput()
     {

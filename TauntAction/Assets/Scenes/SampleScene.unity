@@ -223,6 +223,7 @@ GameObject:
   - component: {fileID: 267090361}
   - component: {fileID: 267090360}
   - component: {fileID: 267090365}
+  - component: {fileID: 267090366}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -244,6 +245,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
   moveSpeed: 9
   turnSpeed: 720
+  dashSpeed: 25
+  dashDuration: 0.18
+  dashCooldown: 0.6
+  iFrameDuration: 0.12
+  passThroughEnemies: 1
+  iFrameColor: {r: 0.6, g: 0.9, b: 1, a: 1}
   cameraReference: {fileID: 0}
 --- !u!143 &267090361
 CharacterController:
@@ -360,6 +367,28 @@ MonoBehaviour:
   destroyDelay: 0.4
   showLabel: 1
   labelOffset: {x: 0, y: 2.2, z: 0}
+--- !u!114 &267090366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 267090359}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 376516a0dfda44547882ea6bde92e55f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerTaunt
+  range: 14
+  halfAngle: 30
+  angleTieTolerance: 1
+  cooldown: 1
+  showAimCone: 1
+  coneColor: {r: 0.45, g: 0.45, b: 0.5, a: 1}
+  candidateColor: {r: 1, g: 1, b: 1, a: 1}
+  candidateCooldownColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  floorHeight: 0.06
+  aimCamera: {fileID: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -1005,8 +1034,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChargerEnemy
   target: {fileID: 267090364}
-  autoAggro: 1
+  naturalAttackEnabled: 0
+  naturalIntervalMin: 4
+  naturalIntervalMax: 6
   aggroRange: 14
+  tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
+  tauntRingRadius: 1.1
   windupTime: 1
   windupTurnSpeed: 360
   aimLockTime: 0.3
@@ -1265,8 +1298,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChargerEnemy
   target: {fileID: 267090364}
-  autoAggro: 1
+  naturalAttackEnabled: 0
+  naturalIntervalMin: 4
+  naturalIntervalMax: 6
   aggroRange: 14
+  tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
+  tauntRingRadius: 1.1
   windupTime: 1
   windupTurnSpeed: 360
   aimLockTime: 0.3

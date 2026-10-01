@@ -2,15 +2,24 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Health))]
-public class ChargerEnemy : MonoBehaviour
+public class ChargerEnemy : MonoBehaviour, ITauntable
 {
     public enum State { Idle, Windup, Charge, Recover, Stunned }
 
     [Header("Targeting")]
     [SerializeField] Transform target;
-    [Tooltip("Prototype-only: start attacking when the target is in range without needing a taunt.")]
-    [SerializeField] bool autoAggro = true;
+
+    [Header("Natural attack (pressure)")]
+    [Tooltip("Attack on its own every few seconds without a taunt. OFF while verifying the taunt loop.")]
+    [SerializeField] bool naturalAttackEnabled = false;
+    [SerializeField] float naturalIntervalMin = 4f;
+    [SerializeField] float naturalIntervalMax = 6f;
+    [Tooltip("Natural attacks only start when the target is within this range.")]
     [SerializeField] float aggroRange = 14f;
+
+    [Header("Taunt")]
+    [SerializeField] Color tauntRingColor = new Color(1f, 0.2f, 0.9f);
+    [SerializeField] float tauntRingRadius = 1.1f;
 
     [Header("Windup (telegraph)")]
     [SerializeField] float windupTime = 1.0f;
@@ -43,6 +52,7 @@ public class ChargerEnemy : MonoBehaviour
     public State Current { get; private set; } = State.Idle;
 
     float stateTimer;
+    float naturalTimer;
     float traveled;
     Vector3 chargeDir;
     Health health;
@@ -50,7 +60,16 @@ public class ChargerEnemy : MonoBehaviour
     Material bodyMat;
     Transform lane;
     Material laneMat;
+    LineRenderer tauntRing;
     readonly HashSet<Object> hitThisCharge = new HashSet<Object>();
+
+    // Taunt accepted while busy: start the windup as soon as this enemy is free.
+    bool tauntPending;
+    // From an accepted taunt until that taunted charge is over (drives the ring).
+    bool tauntActive;
+
+    public bool CanBeTaunted => enabled && !health.IsDead;
+    public bool IsTaunted => tauntActive;
 
     public void SetTarget(Transform t) => target = t;
 
@@ -61,7 +80,13 @@ public class ChargerEnemy : MonoBehaviour
         health = GetComponent<Health>();
         health.Died += OnDied;
         BuildLane();
+        tauntRing = RingVisual.Create("TauntRing", transform, tauntRingRadius, 0.15f, tauntRingColor);
+        tauntRing.transform.localPosition = new Vector3(0f, -0.94f, 0f);
+        tauntRing.gameObject.SetActive(false);
     }
+
+    void OnEnable() => TauntRegistry.Register(this);
+    void OnDisable() => TauntRegistry.Unregister(this);
 
     void OnDestroy()
     {
@@ -72,7 +97,41 @@ public class ChargerEnemy : MonoBehaviour
     {
         enabled = false;
         lane.gameObject.SetActive(false);
+        SetTaunt(false, false);
         SetBodyColor(new Color(0.1f, 0.1f, 0.1f));
+    }
+
+    // ---- Taunt ------------------------------------------------------------
+
+    /// <summary>Attack the taunter now: skip the natural-attack wait and wind up immediately if possible.</summary>
+    public bool Taunt(Transform taunter)
+    {
+        if (!CanBeTaunted || taunter == null) return false;
+
+        target = taunter;
+        switch (Current)
+        {
+            case State.Idle:
+                SetTaunt(true, false);
+                EnterState(State.Windup, windupTime);
+                break;
+            case State.Windup:
+                // Already winding up; it now aims at the taunter.
+                SetTaunt(true, false);
+                break;
+            default:
+                // Charge / Recover / Stunned: queue it.
+                SetTaunt(true, true);
+                break;
+        }
+        return true;
+    }
+
+    void SetTaunt(bool active, bool pending)
+    {
+        tauntActive = active;
+        tauntPending = pending;
+        tauntRing.gameObject.SetActive(active);
     }
 
     void Start()
@@ -91,7 +150,10 @@ public class ChargerEnemy : MonoBehaviour
 
         switch (Current)
         {
-            case State.Idle: UpdateIdle(); break;
+            case State.Idle:
+                naturalTimer -= Time.deltaTime;
+                UpdateIdle();
+                break;
             case State.Windup: UpdateWindup(); break;
             case State.Charge: UpdateCharge(); break;
             case State.Recover:
@@ -105,7 +167,15 @@ public class ChargerEnemy : MonoBehaviour
 
     void UpdateIdle()
     {
-        if (stateTimer > 0f || target == null || !autoAggro) return;
+        // A queued taunt skips both the idle cooldown and the natural-attack wait.
+        if (tauntPending)
+        {
+            tauntPending = false;
+            EnterState(State.Windup, windupTime);
+            return;
+        }
+
+        if (!naturalAttackEnabled || stateTimer > 0f || naturalTimer > 0f || target == null) return;
         if (FlatDistanceTo(target.position) <= aggroRange)
             EnterState(State.Windup, windupTime);
     }
@@ -155,9 +225,17 @@ public class ChargerEnemy : MonoBehaviour
 
         lane.gameObject.SetActive(next == State.Windup);
 
+        // The taunted charge is over once we leave it, unless another taunt is queued.
+        if (tauntActive && !tauntPending && (next == State.Recover || next == State.Stunned || next == State.Idle))
+            SetTaunt(false, false);
+
         switch (next)
         {
-            case State.Idle: SetBodyColor(idleColor); break;
+            case State.Idle:
+                SetBodyColor(idleColor);
+                // Restart the natural wait every time, so a taunted attack isn't followed by an instant natural one.
+                naturalTimer = Random.Range(naturalIntervalMin, naturalIntervalMax);
+                break;
             case State.Windup: SetBodyColor(windupColor); break;
             case State.Charge:
                 SetBodyColor(chargeColor);
