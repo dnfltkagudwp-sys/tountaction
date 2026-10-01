@@ -39,7 +39,7 @@ public class DebugHud : MonoBehaviour
         if (taunt != null) sb.AppendLine($"Taunt {Cooldown(taunt.CooldownRemaining)}");
 
         int alive = 0;
-        var enemies = FindObjectsByType<ChargerEnemy>();
+        var enemies = FindObjectsByType<EnemyBase>();
         foreach (var e in enemies)
         {
             var h = e.GetComponent<Health>();
@@ -47,7 +47,7 @@ public class DebugHud : MonoBehaviour
             alive++;
             float nt = e.NaturalTimeRemaining;
             string natural = nt < 0f ? "-" : $"{nt:0.0}s";
-            sb.AppendLine($"{e.name}: {e.Current,-8} HP {h.Current:0.#}  next attack {natural}{(e.IsLaneBlocked ? "  (lane blocked)" : "")}{(e.IsTaunted ? "  TAUNTED" : "")}");
+            sb.AppendLine($"{e.name}: {e.StateLabel,-8} HP {h.Current:0.#}  next attack {natural}{(e.IsLaneBlocked ? "  (lane blocked)" : "")}{(e.IsTaunted ? "  TAUNTED" : "")}");
         }
         sb.Insert(0, $"Enemies alive: {alive}\n");
 
