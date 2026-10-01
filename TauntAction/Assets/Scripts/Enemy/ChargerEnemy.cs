@@ -20,6 +20,8 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [SerializeField] float firstAttackDelayMax = 1.5f;
     [Tooltip("Natural attacks only start when the target is within this range.")]
     [SerializeField] float aggroRange = 14f;
+    [Tooltip("Skip natural attacks while a wall/obstacle blocks the lane to the target; close in instead. Taunts ignore this.")]
+    [SerializeField] bool naturalNeedsClearLane = true;
 
     [Header("Repositioning (while Idle)")]
     [SerializeField] bool repositionEnabled = true;
@@ -31,6 +33,12 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [SerializeField] bool retreatWhenClose = false;
     [Tooltip("Circle the target while inside the distance band. OFF so lined-up shots stay lined up.")]
     [SerializeField] bool orbitInRange = false;
+    [Tooltip("While holding, step toward the target when parked against a wall/obstacle, so it doesn't look stuck.")]
+    [SerializeField] bool stepOffWalls = true;
+    [Tooltip("Start stepping off when a wall is closer than this (from the body center).")]
+    [SerializeField] float wallHugDistance = 1.5f;
+    [Tooltip("Stop stepping off once every wall is at least this far.")]
+    [SerializeField] float wallClearDistance = 2f;
     [Tooltip("Push away from other enemies closer than this.")]
     [SerializeField] float separationRadius = 3f;
     [SerializeField] float idleTurnSpeed = 240f;
@@ -98,6 +106,10 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     bool tauntActive;
 
     float orbitSign = 1f;
+    bool laneBlocked;
+
+    /// <summary>True while Idle and a wall/obstacle sits between this enemy and its target.</summary>
+    public bool IsLaneBlocked => laneBlocked;
 
     public bool CanBeTaunted => enabled && !health.IsDead;
     public bool IsTaunted => tauntActive;
@@ -214,11 +226,22 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             return;
         }
 
+        laneBlocked = naturalNeedsClearLane && target != null && IsLaneToTargetBlocked();
+
         if (repositionEnabled) Reposition();
 
-        if (!naturalAttackEnabled || stateTimer > 0f || naturalTimer > 0f || target == null) return;
+        if (!naturalAttackEnabled || stateTimer > 0f || naturalTimer > 0f || target == null || laneBlocked) return;
         if (FlatDistanceTo(target.position) <= aggroRange)
             EnterState(State.Windup, windupTime);
+    }
+
+    bool IsLaneToTargetBlocked()
+    {
+        Vector3 to = Flat(target.position - transform.position);
+        float dist = to.magnitude;
+        if (dist < 0.001f) return false;
+        // Other enemies don't count: charging into them is the point.
+        return CastObstacle(transform.position, to / dist, dist, out _);
     }
 
     /// <summary>Close in when the target is far; otherwise hold (optionally retreat/circle), staying apart from other enemies.</summary>
@@ -232,6 +255,21 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         Vector3 toDir = to / dist;
 
         float radial = dist > keepDistanceMax ? 1f : (retreatWhenClose && dist < keepDistanceMin) ? -1f : 0f;
+
+        // Holding against a wall reads as "stuck": walk straight toward the target (keeps lined-up shots lined up)
+        // until clear of the wall, but never inside the min distance.
+        if (stepOffWalls && radial == 0f)
+        {
+            float wallDist = NearestObstacleDistance(wallClearDistance);
+            if (!steppingOffWall && wallDist < wallHugDistance) steppingOffWall = true;
+            else if (steppingOffWall && wallDist >= wallClearDistance) steppingOffWall = false;
+            if (steppingOffWall && dist > keepDistanceMin) radial = 1f;
+        }
+        else steppingOffWall = false;
+
+        // Target hidden behind cover: close in (the detour walks around the obstacle) until the lane opens.
+        if (laneBlocked) radial = 1f;
+
         Vector3 move = toDir * radial;
         if (orbitInRange)
         {
@@ -348,6 +386,22 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     const float DetourHoldTime = 0.5f;
     float detourTimer;
     float detourSign = 1f;
+    bool steppingOffWall;
+
+    /// <summary>Flat distance to the nearest wall/obstacle within radius (floor and Health owners ignored).</summary>
+    float NearestObstacleDistance(float radius)
+    {
+        float best = float.MaxValue;
+        Vector3 pos = transform.position;
+        foreach (var c in Physics.OverlapSphere(pos, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            if (c.transform.IsChildOf(transform) || c.GetComponentInParent<Health>() != null) continue;
+            Vector3 cp = c.ClosestPoint(pos);
+            if (cp.y < pos.y - 0.9f) continue; // the floor under us
+            best = Mathf.Min(best, Flat(cp - pos).magnitude);
+        }
+        return best;
+    }
 
     /// <summary>Nearest non-Health collider along the path (walls, blocks). Health owners are handled by hit detection.</summary>
     bool CastObstacle(Vector3 origin, Vector3 dir, float dist, out RaycastHit best)
@@ -402,6 +456,7 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     {
         Current = next;
         stateTimer = duration;
+        if (next != State.Idle) laneBlocked = false;
 
         lane.gameObject.SetActive(next == State.Windup);
 

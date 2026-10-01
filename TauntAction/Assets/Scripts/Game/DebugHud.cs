@@ -47,7 +47,7 @@ public class DebugHud : MonoBehaviour
             alive++;
             float nt = e.NaturalTimeRemaining;
             string natural = nt < 0f ? "-" : $"{nt:0.0}s";
-            sb.AppendLine($"{e.name}: {e.Current,-8} HP {h.Current:0.#}  next attack {natural}{(e.IsTaunted ? "  TAUNTED" : "")}");
+            sb.AppendLine($"{e.name}: {e.Current,-8} HP {h.Current:0.#}  next attack {natural}{(e.IsLaneBlocked ? "  (lane blocked)" : "")}{(e.IsTaunted ? "  TAUNTED" : "")}");
         }
         sb.Insert(0, $"Enemies alive: {alive}\n");
 
