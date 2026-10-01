@@ -12,17 +12,25 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [Header("Natural attack (pressure)")]
     [Tooltip("Attack on its own every few seconds without a taunt. Turn OFF to verify the pure taunt loop.")]
     [SerializeField] bool naturalAttackEnabled = true;
-    [SerializeField] float naturalIntervalMin = 4f;
-    [SerializeField] float naturalIntervalMax = 6f;
+    [Tooltip("Wait after returning to Idle. The full cycle also includes windup + charge + recovery (~2.4s).")]
+    [SerializeField] float naturalIntervalMin = 1.5f;
+    [SerializeField] float naturalIntervalMax = 3f;
+    [Tooltip("The first natural attack is ready this soon after spawning (random in range), instead of a full interval.")]
+    [SerializeField] float firstAttackDelayMin = 0.5f;
+    [SerializeField] float firstAttackDelayMax = 1.5f;
     [Tooltip("Natural attacks only start when the target is within this range.")]
     [SerializeField] float aggroRange = 14f;
 
     [Header("Repositioning (while Idle)")]
     [SerializeField] bool repositionEnabled = true;
     [SerializeField] float moveSpeed = 3.5f;
-    [Tooltip("Keep the target between these distances: approach beyond max, back off inside min, circle in between.")]
+    [Tooltip("Approach while the target is farther than max. Inside it, hold position (unless the options below are on).")]
     [SerializeField] float keepDistanceMin = 6f;
     [SerializeField] float keepDistanceMax = 10f;
+    [Tooltip("Back off when the target is closer than min. OFF so the player can walk in and line enemies up.")]
+    [SerializeField] bool retreatWhenClose = false;
+    [Tooltip("Circle the target while inside the distance band. OFF so lined-up shots stay lined up.")]
+    [SerializeField] bool orbitInRange = false;
     [Tooltip("Push away from other enemies closer than this.")]
     [SerializeField] float separationRadius = 3f;
     [SerializeField] float idleTurnSpeed = 240f;
@@ -166,6 +174,8 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         orbitSign = Random.value < 0.5f ? -1f : 1f;
         // A taunt can arrive before Start; don't overwrite it.
         if (!tauntActive) EnterState(State.Idle, idleCooldown);
+        // Start ready to attack: in range = attacking soon, no long opening stare.
+        naturalTimer = Random.Range(firstAttackDelayMin, firstAttackDelayMax);
     }
 
     void Update()
@@ -208,7 +218,7 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             EnterState(State.Windup, windupTime);
     }
 
-    /// <summary>Hold a distance band around the target, circling inside it, while staying apart from other enemies.</summary>
+    /// <summary>Close in when the target is far; otherwise hold (optionally retreat/circle), staying apart from other enemies.</summary>
     void Reposition()
     {
         if (target == null) return;
@@ -218,9 +228,13 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         if (dist < 0.001f) return;
         Vector3 toDir = to / dist;
 
-        float radial = dist > keepDistanceMax ? 1f : dist < keepDistanceMin ? -1f : 0f;
-        Vector3 tangent = Vector3.Cross(Vector3.up, toDir) * orbitSign;
-        Vector3 move = toDir * radial + tangent * (radial == 0f ? 1f : 0.5f);
+        float radial = dist > keepDistanceMax ? 1f : (retreatWhenClose && dist < keepDistanceMin) ? -1f : 0f;
+        Vector3 move = toDir * radial;
+        if (orbitInRange)
+        {
+            Vector3 tangent = Vector3.Cross(Vector3.up, toDir) * orbitSign;
+            move += tangent * (radial == 0f ? 1f : 0.5f);
+        }
 
         foreach (var other in TauntRegistry.All)
         {
