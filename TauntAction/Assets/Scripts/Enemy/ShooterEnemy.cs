@@ -40,13 +40,37 @@ public class ShooterEnemy : EnemyBase
         laser.material.SetColor("_BaseColor", Color.Lerp(laserStartColor, laserEndColor, progress));
         laser.widthMultiplier = Mathf.Lerp(0.03f, 0.1f, progress);
 
-        // Show exactly where the bullet would stop.
+        // Show exactly where the bullet would stop, plus the bounce off a reflecting surface.
         Vector3 origin = Muzzle();
         Vector3 dir = Flat(transform.forward).normalized;
-        float len = laserMaxLength;
-        if (CastObstacle(origin, dir, laserMaxLength, projectileRadius, out RaycastHit hit)) len = hit.distance;
-        laser.SetPosition(0, origin);
-        laser.SetPosition(1, origin + dir * len);
+        if (!CastObstacle(origin, dir, laserMaxLength, projectileRadius, out RaycastHit hit))
+        {
+            SetLaser(origin, origin + dir * laserMaxLength);
+            return;
+        }
+
+        Vector3 contact = origin + dir * hit.distance;
+        var surface = hit.collider.GetComponentInParent<ImpactSurface>();
+        if (surface == null || !surface.ReflectProjectiles)
+        {
+            SetLaser(origin, contact);
+            return;
+        }
+
+        Vector3 normal = Flat(hit.normal).normalized;
+        Vector3 bounceDir = Flat(Vector3.Reflect(dir, normal)).normalized;
+        Vector3 bounceStart = contact + normal * 0.05f;
+        float bounceLen = laserMaxLength - hit.distance;
+        // The bounce can come back at this shooter, so don't skip our own collider here.
+        if (Physics.SphereCast(bounceStart, projectileRadius, bounceDir, out RaycastHit bounceHit, bounceLen, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
+            bounceLen = bounceHit.distance;
+        SetLaser(origin, contact, bounceStart + bounceDir * bounceLen);
+    }
+
+    void SetLaser(params Vector3[] points)
+    {
+        laser.positionCount = points.Length;
+        laser.SetPositions(points);
     }
 
     protected override void UpdateAttack()
