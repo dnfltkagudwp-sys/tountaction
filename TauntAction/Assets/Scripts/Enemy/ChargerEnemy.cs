@@ -54,7 +54,10 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     [SerializeField] float chargeSpeed = 18f;
     [SerializeField] float chargeDistance = 12f;
     [SerializeField] float hitRadius = 0.9f;
-    [SerializeField] float chargeDamage = 1f;
+    [UnityEngine.Serialization.FormerlySerializedAs("chargeDamage")]
+    [SerializeField] float damageToPlayer = 1f;
+    [Tooltip("Charge damage to other enemies. Higher than wall self-damage so enemy-on-enemy stays the best play.")]
+    [SerializeField] float damageToEnemy = 2f;
     [Tooltip("Hitting another enemy ends the charge on the spot (like a wall) instead of passing through.")]
     [SerializeField] bool stopOnEnemyHit = true;
     [SerializeField] float enemyHitStunTime = 1.0f;
@@ -246,7 +249,8 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         }
 
         if (move.sqrMagnitude > 1f) move.Normalize();
-        Vector3 pos = transform.position + move * moveSpeed * Time.deltaTime;
+        detourTimer -= Time.deltaTime;
+        Vector3 pos = transform.position + BlockedByObstacles(move * moveSpeed * Time.deltaTime);
 
         float limit = arenaHalfExtent - bodyRadius;
         if (Mathf.Abs(pos.x) > limit || Mathf.Abs(pos.z) > limit)
@@ -302,10 +306,20 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
     void UpdateCharge()
     {
         float step = chargeSpeed * Time.deltaTime;
+        bool hitWall = false;
+        ImpactSurface surface = null;
+
+        // Walls and obstacles are real colliders; stop just short of the first one in the path.
+        if (CastObstacle(transform.position, chargeDir, step, out RaycastHit hit))
+        {
+            step = Mathf.Max(0f, hit.distance - Skin);
+            hitWall = true;
+            surface = hit.collider.GetComponentInParent<ImpactSurface>();
+        }
         Vector3 pos = transform.position + chargeDir * step;
 
+        // Safety net in case the arena edge has no collider.
         float limit = arenaHalfExtent - bodyRadius;
-        bool hitWall = false;
         if (Mathf.Abs(pos.x) > limit) { pos.x = Mathf.Clamp(pos.x, -limit, limit); hitWall = true; }
         if (Mathf.Abs(pos.z) > limit) { pos.z = Mathf.Clamp(pos.z, -limit, limit); hitWall = true; }
 
@@ -315,8 +329,73 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
         bool hitEnemy = DetectHits();
 
         if (hitEnemy && stopOnEnemyHit) EnterState(State.Stunned, enemyHitStunTime);
-        else if (hitWall) EnterState(State.Stunned, wallStunTime);
+        else if (hitWall) HitWall(surface);
         else if (traveled >= chargeDistance) EnterState(State.Recover, recoverTime);
+    }
+
+    void HitWall(ImpactSurface surface)
+    {
+        float stun = surface != null && surface.StunTimeOverride >= 0f ? surface.StunTimeOverride : wallStunTime;
+        // Enter the stun first: dying from the self-damage must win over the stun color.
+        EnterState(State.Stunned, stun);
+        if (surface != null && surface.ChargeSelfDamage > 0f)
+            health.TakeDamage(new DamageInfo(surface.ChargeSelfDamage, surface.gameObject, -chargeDir));
+    }
+
+    // ---- Obstacles --------------------------------------------------------
+
+    const float Skin = 0.02f;
+    const float DetourHoldTime = 0.5f;
+    float detourTimer;
+    float detourSign = 1f;
+
+    /// <summary>Nearest non-Health collider along the path (walls, blocks). Health owners are handled by hit detection.</summary>
+    bool CastObstacle(Vector3 origin, Vector3 dir, float dist, out RaycastHit best)
+    {
+        best = default;
+        bool found = false;
+        float bestDist = float.MaxValue;
+        var hits = Physics.SphereCastAll(origin, bodyRadius, dir, dist + Skin, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        foreach (var h in hits)
+        {
+            if (h.collider.transform.IsChildOf(transform)) continue;
+            if (h.collider.GetComponentInParent<Health>() != null) continue;
+            // Already overlapping at the start: ignore so we can move back out.
+            if (h.distance <= 0f && h.point == Vector3.zero) continue;
+            if (h.distance < bestDist)
+            {
+                bestDist = h.distance;
+                best = h;
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    /// <summary>Clip an idle move against obstacles, sliding along them when possible.</summary>
+    Vector3 BlockedByObstacles(Vector3 delta)
+    {
+        float len = delta.magnitude;
+        if (len < 0.0001f) return delta;
+        Vector3 dir = delta / len;
+        if (!CastObstacle(transform.position, dir, len, out RaycastHit hit)) return delta;
+
+        Vector3 allowed = dir * Mathf.Max(0f, hit.distance - Skin);
+        Vector3 normal = Flat(hit.normal).normalized;
+        Vector3 along = Vector3.Cross(Vector3.up, normal);
+
+        // Pick a side once and keep it while blocked, so we walk around the obstacle instead of jittering in front of it.
+        if (detourTimer <= 0f)
+        {
+            float side = Vector3.Dot(delta, along);
+            detourSign = Mathf.Abs(side) > len * 0.1f ? Mathf.Sign(side) : orbitSign;
+        }
+        detourTimer = DetourHoldTime;
+
+        Vector3 slide = along * detourSign * len;
+        if (!CastObstacle(transform.position + allowed, slide.normalized, slide.magnitude, out _)) allowed += slide;
+        else detourSign = -detourSign; // cornered: try the other side
+        return allowed;
     }
 
     void EnterState(State next, float duration)
@@ -362,8 +441,9 @@ public class ChargerEnemy : MonoBehaviour, ITauntable
             if (victim == null || victim == health || victim.IsDead) continue;
             if (!hitThisCharge.Add(victim)) continue;
 
-            victim.TakeDamage(new DamageInfo(chargeDamage, gameObject, chargeDir));
-            if (victim.GetComponent<ITauntable>() != null) hitEnemy = true;
+            bool isEnemy = victim.GetComponent<ITauntable>() != null;
+            victim.TakeDamage(new DamageInfo(isEnemy ? damageToEnemy : damageToPlayer, gameObject, chargeDir));
+            if (isEnemy) hitEnemy = true;
         }
         return hitEnemy;
     }
