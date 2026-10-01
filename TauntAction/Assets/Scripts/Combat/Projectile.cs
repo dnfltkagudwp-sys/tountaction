@@ -21,6 +21,8 @@ public class Projectile : MonoBehaviour
     float damageToEnemy;
     float traveled;
     bool reflected;
+    // Set for the first step after a bounce, when we start right next to the mirror.
+    bool justReflected;
 
     public bool IsReflected => reflected;
 
@@ -41,6 +43,9 @@ public class Projectile : MonoBehaviour
         // Enemy bodies are triggers, so triggers must be included here.
         var hits = Physics.SphereCastAll(transform.position, radius, dir, step, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        bool skipStartOverlap = justReflected;
+        justReflected = false;
 
         foreach (var h in hits)
         {
@@ -64,8 +69,14 @@ public class Projectile : MonoBehaviour
                 return;
             }
 
-            // Already touching a surface at the start (e.g. right after a bounce): ignore it.
-            if (h.distance <= 0f && h.point == Vector3.zero) continue;
+            // Starting overlapped with a surface: only expected right after a bounce (we sit just off the
+            // mirror). Anywhere else it means we began inside a wall, so the bullet dies there.
+            if (h.distance <= 0f && h.point == Vector3.zero)
+            {
+                if (skipStartOverlap) continue;
+                Destroy(gameObject);
+                return;
+            }
 
             var surface = h.collider.GetComponentInParent<ImpactSurface>();
             if (!reflected && surface != null && surface.ReflectProjectiles)
@@ -93,6 +104,7 @@ public class Projectile : MonoBehaviour
         dir.y = 0f; dir.Normalize();
 
         reflected = true;
+        justReflected = true;
         owner = null; // the shooter can now be hit by its own bullet
         damageToEnemy = surface.ReflectedDamage;
         damageToPlayer = 0f;

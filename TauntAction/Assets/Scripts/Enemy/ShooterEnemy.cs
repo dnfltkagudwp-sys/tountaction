@@ -41,15 +41,17 @@ public class ShooterEnemy : EnemyBase
         laser.widthMultiplier = Mathf.Lerp(0.03f, 0.1f, progress);
 
         // Show exactly where the bullet would stop, plus the bounce off a reflecting surface.
-        Vector3 origin = Muzzle();
+        // Cast from the body center (like Fire) so a shooter pressed against a wall still previews correctly.
+        Vector3 center = transform.position;
         Vector3 dir = Flat(transform.forward).normalized;
-        if (!CastObstacle(origin, dir, laserMaxLength, projectileRadius, out RaycastHit hit))
+        if (!CastObstacle(center, dir, laserMaxLength, projectileRadius, out RaycastHit hit))
         {
-            SetLaser(origin, origin + dir * laserMaxLength);
+            SetLaser(center + dir * MuzzleDistance, center + dir * laserMaxLength);
             return;
         }
 
-        Vector3 contact = origin + dir * hit.distance;
+        Vector3 contact = center + dir * hit.distance;
+        Vector3 origin = center + dir * Mathf.Min(MuzzleDistance, hit.distance);
         var surface = hit.collider.GetComponentInParent<ImpactSurface>();
         if (surface == null || !surface.ReflectProjectiles)
         {
@@ -82,10 +84,17 @@ public class ShooterEnemy : EnemyBase
     void Fire()
     {
         Vector3 dir = Flat(transform.forward).normalized;
+
+        // Pressed against a wall, the muzzle point would be inside it and the bullet would never see it.
+        // Spawn just short of the surface instead, so it reflects (or dies) on its first step.
+        float spawnDist = MuzzleDistance;
+        if (CastObstacle(transform.position, dir, MuzzleDistance, projectileRadius, out RaycastHit hit))
+            spawnDist = Mathf.Max(0f, hit.distance - 0.01f);
+
         var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         go.name = "Bullet";
         DestroyImmediate(go.GetComponent<Collider>()); // must not register as an obstacle
-        go.transform.position = Muzzle();
+        go.transform.position = transform.position + dir * spawnDist;
         go.transform.localScale = Vector3.one * projectileRadius * 2f;
         var r = go.GetComponent<Renderer>();
         r.sharedMaterial = projectileMat;
@@ -93,7 +102,7 @@ public class ShooterEnemy : EnemyBase
         go.AddComponent<Projectile>().Init(transform, dir, projectileSpeed, projectileRadius, projectileMaxDistance, damageToPlayer, damageToEnemy);
     }
 
-    Vector3 Muzzle() => transform.position + Flat(transform.forward).normalized * (bodyRadius + projectileRadius + 0.05f);
+    float MuzzleDistance => bodyRadius + projectileRadius + 0.05f;
 
     void BuildLaser()
     {
