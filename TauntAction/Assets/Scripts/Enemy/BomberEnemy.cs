@@ -19,6 +19,8 @@ public class BomberEnemy : EnemyBase
     [SerializeField] Color bombMarkerStartColor = new Color(0.7f, 0.3f, 0.9f);
     [SerializeField] Color bombMarkerEndColor = new Color(1f, 0.5f, 1f);
     [SerializeField] Color bombColor = new Color(0.25f, 0.1f, 0.3f);
+    [Tooltip("Optional look for the bomb (no colliders needed). Empty = plain sphere.")]
+    [SerializeField] GameObject bombVisual;
 
     const float FloorY = 0.06f;
 
@@ -74,13 +76,22 @@ public class BomberEnemy : EnemyBase
 
     void Throw()
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject go;
+        if (bombVisual != null)
+        {
+            go = Instantiate(bombVisual);
+            // Visual only: any collider would register as an obstacle.
+            foreach (var c in go.GetComponentsInChildren<Collider>()) DestroyImmediate(c);
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            DestroyImmediate(go.GetComponent<Collider>()); // must not register as an obstacle
+            go.transform.localScale = Vector3.one * 0.6f;
+            go.GetComponent<Renderer>().sharedMaterial = bombMat;
+        }
         go.name = "Bomb";
-        DestroyImmediate(go.GetComponent<Collider>()); // must not register as an obstacle
-        go.transform.localScale = Vector3.one * 0.6f;
-        var r = go.GetComponent<Renderer>();
-        r.sharedMaterial = bombMat;
-        r.shadowCastingMode = ShadowCastingMode.Off;
+        foreach (var r in go.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
         go.AddComponent<LobbedBomb>().Init(gameObject, transform.position + Vector3.up * 0.8f, aimPoint, flightTime, arcHeight, blastRadius,
                                           damageToPlayer, damageToEnemy, bombMarkerStartColor, bombMarkerEndColor);
     }

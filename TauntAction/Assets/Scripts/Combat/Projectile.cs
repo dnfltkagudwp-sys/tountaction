@@ -35,6 +35,12 @@ public class Projectile : MonoBehaviour
         this.maxDistance = maxDistance;
         this.damageToPlayer = damageToPlayer;
         this.damageToEnemy = damageToEnemy;
+        FaceDirection();
+    }
+
+    void FaceDirection()
+    {
+        if (dir.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
     }
 
     void Update()
@@ -109,7 +115,12 @@ public class Projectile : MonoBehaviour
         damageToEnemy = surface.ReflectedDamage;
         damageToPlayer = 0f;
 
-        var r = GetComponent<Renderer>();
-        if (r != null) r.material.SetColor("_BaseColor", reflectedColor);
+        FaceDirection();
+        foreach (var r in GetComponentsInChildren<Renderer>())
+            foreach (var m in r.materials)
+            {
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", reflectedColor);
+                if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", reflectedColor);
+            }
     }
 }

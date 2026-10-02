@@ -45,6 +45,8 @@ public class PlayerTaunt : MonoBehaviour
     public Vector3 AimPoint { get; private set; }
     public bool HasAim { get; private set; }
     public float CooldownRemaining => Mathf.Max(0f, cooldownTimer);
+    /// <summary>Fired when a taunt lands (for visuals).</summary>
+    public event System.Action Taunted;
 
     void Awake()
     {
@@ -83,7 +85,10 @@ public class PlayerTaunt : MonoBehaviour
         if (Candidate != null && cooldownTimer <= 0f && TauntPressed())
         {
             if (Candidate.Taunt(transform))
+            {
                 cooldownTimer = cooldown;
+                Taunted?.Invoke();
+            }
         }
 
         UpdateVisuals(hasAim, aimDir);

@@ -9,6 +9,8 @@ public class ShooterEnemy : EnemyBase
     [SerializeField] float projectileRadius = 0.25f;
     [SerializeField] float projectileMaxDistance = 40f;
     [SerializeField] Color projectileColor = new Color(0.6f, 1f, 1f);
+    [Tooltip("Optional look for the bullet (faces +Z, no colliders needed). Empty = plain sphere.")]
+    [SerializeField] GameObject projectileVisual;
 
     [Header("Telegraph")]
     [SerializeField] float laserMaxLength = 40f;
@@ -91,14 +93,24 @@ public class ShooterEnemy : EnemyBase
         if (CastObstacle(transform.position, dir, MuzzleDistance, projectileRadius, out RaycastHit hit))
             spawnDist = Mathf.Max(0f, hit.distance - 0.01f);
 
-        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Vector3 spawn = transform.position + dir * spawnDist;
+        GameObject go;
+        if (projectileVisual != null)
+        {
+            go = Instantiate(projectileVisual, spawn, Quaternion.LookRotation(dir, Vector3.up));
+            // Visual only: any collider would register as an obstacle.
+            foreach (var c in go.GetComponentsInChildren<Collider>()) DestroyImmediate(c);
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            DestroyImmediate(go.GetComponent<Collider>()); // must not register as an obstacle
+            go.transform.position = spawn;
+            go.transform.localScale = Vector3.one * projectileRadius * 2f;
+            go.GetComponent<Renderer>().sharedMaterial = projectileMat;
+        }
         go.name = "Bullet";
-        DestroyImmediate(go.GetComponent<Collider>()); // must not register as an obstacle
-        go.transform.position = transform.position + dir * spawnDist;
-        go.transform.localScale = Vector3.one * projectileRadius * 2f;
-        var r = go.GetComponent<Renderer>();
-        r.sharedMaterial = projectileMat;
-        r.shadowCastingMode = ShadowCastingMode.Off;
+        foreach (var r in go.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
         go.AddComponent<Projectile>().Init(transform, dir, projectileSpeed, projectileRadius, projectileMaxDistance, damageToPlayer, damageToEnemy);
     }
 

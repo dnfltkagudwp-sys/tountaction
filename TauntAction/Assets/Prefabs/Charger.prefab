@@ -44,6 +44,7 @@ GameObject:
   - component: {fileID: 1238326086359031728}
   - component: {fileID: 2744219977357593834}
   - component: {fileID: 7377275357556481971}
+  - component: {fileID: 7024359353684238963}
   m_Layer: 0
   m_Name: Charger
   m_TagString: Untagged
@@ -169,6 +170,33 @@ MonoBehaviour:
   destroyDelay: 0.4
   showLabel: 1
   labelOffset: {x: 0, y: 2.2, z: 0}
+--- !u!114 &7024359353684238963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7355944013645396194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3121bb3c640bd834688ce694b898c995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralMotion
+  hopHeight: 0.12
+  hopsPerMeter: 0.55
+  leanPerSpeed: 1.5
+  maxLean: 14
+  swayAngle: 4
+  breatheAmount: 0.025
+  breatheSpeed: 2.2
+  windupCrouch: 0.12
+  windupShake: 0.06
+  attackLean: 18
+  stunWobble: 10
+  hitSquash: 0.2
+  hitTime: 0.18
+  dashLean: 22
+  dashStretch: 0.15
 --- !u!1001 &556981766701276215
 PrefabInstance:
   m_ObjectHideFlags: 0

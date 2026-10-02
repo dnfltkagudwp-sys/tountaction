@@ -122,6 +122,9 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
     /// <summary>Seconds until the next natural attack may start; negative when off or not idle.</summary>
     public float NaturalTimeRemaining => naturalAttackEnabled && Current == State.Idle ? Mathf.Max(0f, naturalTimer) : -1f;
     protected float AimLockTime => aimLockTime;
+    public float WindupDuration => windupTime;
+    /// <summary>0..1 through the current windup (0 outside it). For visuals.</summary>
+    public float WindupProgress => Current == State.Windup && windupTime > 0f ? 1f - Mathf.Clamp01(stateTimer / windupTime) : 0f;
     /// <summary>State name for debug readouts (subclasses can rename Attack, e.g. "Charge").</summary>
     public virtual string StateLabel => Current.ToString();
 
