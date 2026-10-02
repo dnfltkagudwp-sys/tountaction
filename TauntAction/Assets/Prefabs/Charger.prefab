@@ -86,7 +86,7 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.7
+  m_Radius: 0.85
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
@@ -124,12 +124,12 @@ MonoBehaviour:
   separationRadius: 3
   idleTurnSpeed: 240
   contactDamage: 1
-  contactRadius: 1.2
+  contactRadius: 1.4
   tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
-  tauntRingRadius: 1.45
+  tauntRingRadius: 1.7
   showRoleRing: 1
   roleRingColor: {r: 1, g: 0.25, b: 0.2, a: 1}
-  roleRingRadius: 1.1
+  roleRingRadius: 1.3
   windupTime: 1
   windupTurnSpeed: 360
   aimLockTime: 0.3
@@ -138,7 +138,7 @@ MonoBehaviour:
   recoverTime: 0.7
   idleCooldown: 0.3
   arenaHalfExtent: 15
-  bodyRadius: 0.7
+  bodyRadius: 0.85
   idleColor: {r: 1, g: 1, b: 1, a: 1}
   windupColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   attackColor: {r: 1, g: 0.15, b: 0.1, a: 1}
@@ -146,7 +146,7 @@ MonoBehaviour:
   stunColor: {r: 0.3, g: 0.5, b: 1, a: 1}
   chargeSpeed: 18
   chargeDistance: 12
-  hitRadius: 1.05
+  hitRadius: 1.25
   stopOnEnemyHit: 1
   enemyHitStunTime: 1
   wallStunTime: 1.2
@@ -179,15 +179,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 98f180b37d52aab4186f92500316804d, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 98f180b37d52aab4186f92500316804d, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 98f180b37d52aab4186f92500316804d, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 98f180b37d52aab4186f92500316804d, type: 3}
       propertyPath: m_LocalPosition.x
