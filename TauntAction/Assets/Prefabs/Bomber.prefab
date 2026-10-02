@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8360631073925648801}
   - component: {fileID: 6482013912401716412}
   - component: {fileID: 1310746352371061370}
+  - component: {fileID: 4913793941964841172}
   m_Layer: 0
   m_Name: Bomber
   m_TagString: Untagged
@@ -169,6 +170,8 @@ MonoBehaviour:
   hitTime: 0.18
   dashLean: 22
   dashStretch: 0.15
+  spinTime: 0.4
+  spinFlare: 0.18
 --- !u!114 &1310746352371061370
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,6 +187,26 @@ MonoBehaviour:
   attackRelease: 0.72
   tauntSpeed: 1.5
   crossFade: 0.08
+--- !u!114 &4913793941964841172
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40a9c09bde1dd894899835738afb58bb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthPips
+  color: {r: 0.75, g: 0.35, b: 1, a: 1}
+  emptyColor: {r: 0.15, g: 0.15, b: 0.17, a: 1}
+  outlineColor: {r: 0.02, g: 0.02, b: 0.03, a: 1}
+  pipSize: {x: 0.32, y: 0.16}
+  gap: 0.07
+  outline: 0.04
+  headroom: 0.35
+  flashTime: 0.15
 --- !u!1 &5791210941036274589
 GameObject:
   m_ObjectHideFlags: 0

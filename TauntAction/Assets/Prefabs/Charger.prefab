@@ -45,6 +45,7 @@ GameObject:
   - component: {fileID: 2744219977357593834}
   - component: {fileID: 7377275357556481971}
   - component: {fileID: 7024359353684238963}
+  - component: {fileID: 703806505213278384}
   m_Layer: 0
   m_Name: Charger
   m_TagString: Untagged
@@ -197,6 +198,28 @@ MonoBehaviour:
   hitTime: 0.18
   dashLean: 22
   dashStretch: 0.15
+  spinTime: 0.4
+  spinFlare: 0.18
+--- !u!114 &703806505213278384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7355944013645396194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40a9c09bde1dd894899835738afb58bb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthPips
+  color: {r: 1, g: 0.25, b: 0.2, a: 1}
+  emptyColor: {r: 0.15, g: 0.15, b: 0.17, a: 1}
+  outlineColor: {r: 0.02, g: 0.02, b: 0.03, a: 1}
+  pipSize: {x: 0.32, y: 0.16}
+  gap: 0.07
+  outline: 0.04
+  headroom: 0.35
+  flashTime: 0.15
 --- !u!1001 &556981766701276215
 PrefabInstance:
   m_ObjectHideFlags: 0

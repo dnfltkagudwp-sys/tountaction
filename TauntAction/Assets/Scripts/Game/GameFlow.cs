@@ -15,11 +15,15 @@ public class GameFlow : MonoBehaviour
 
     [Tooltip("Seconds after the result before the game freezes, so the final hit is visible.")]
     [SerializeField] float freezeDelay = 0.5f;
+    [Tooltip("After the last room: show ALL ROOMS CLEAR this long, then load the clear scene. Empty = stay here.")]
+    [SerializeField] string clearScene = "Clear";
+    [SerializeField] float clearSceneDelay = 1.5f;
 
     readonly List<Health> enemies = new List<Health>();
     Health player;
     RoomManager rooms;
     float freezeTimer = -1f;
+    float clearTimer = -1f;
 
     public Result Current { get; private set; } = Result.Playing;
 
@@ -59,6 +63,8 @@ public class GameFlow : MonoBehaviour
         if (Current != Result.Playing) return;
         Current = r;
         freezeTimer = freezeDelay;
+        if (r == Result.Fail) RunStats.Deaths++;
+        if (r == Result.Clear && rooms != null && !string.IsNullOrEmpty(clearScene)) clearTimer = clearSceneDelay;
         Debug.Log($"[GameFlow] {r}");
     }
 
@@ -72,23 +78,38 @@ public class GameFlow : MonoBehaviour
             return;
         }
 
+        if (Current == Result.Playing) RunStats.PlayTime += Time.deltaTime;
+
         if (freezeTimer >= 0f)
         {
             freezeTimer -= Time.unscaledDeltaTime;
             if (freezeTimer < 0f) Time.timeScale = 0f;
+        }
+
+        if (clearTimer >= 0f)
+        {
+            clearTimer -= Time.unscaledDeltaTime;
+            if (clearTimer < 0f)
+            {
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(clearScene);
+            }
         }
     }
 
     /// <summary>Retry the current room (or the whole run once everything is cleared).</summary>
     void Restart()
     {
-        RoomManager.StartRoomIndex = rooms != null && Current != Result.Clear ? rooms.CurrentRoomIndex : 0;
+        bool fresh = rooms == null || Current == Result.Clear;
+        RoomManager.StartRoomIndex = fresh ? 0 : rooms.CurrentRoomIndex;
+        if (fresh) RunStats.Reset();
         Reload();
     }
 
     void RestartRun()
     {
         RoomManager.StartRoomIndex = 0;
+        RunStats.Reset();
         Reload();
     }
 
@@ -100,11 +121,7 @@ public class GameFlow : MonoBehaviour
 
     void OnGUI()
     {
-        if (Current == Result.Playing)
-        {
-            GUI.Label(new Rect(10f, 10f, 400f, 20f), rooms != null ? "R: retry room   Shift+R: restart from room 1" : "R: restart");
-            return;
-        }
+        if (Current == Result.Playing) return; // controls are on the HUD
 
         var big = new GUIStyle(GUI.skin.label)
         {
