@@ -128,7 +128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7efb0d7af977fa45ab73e1972b91c0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 4
+  maxHealth: 3
   hitInvulnerableTime: 0
   blinkInterval: 0.08
   destroyOnDeath: 1
