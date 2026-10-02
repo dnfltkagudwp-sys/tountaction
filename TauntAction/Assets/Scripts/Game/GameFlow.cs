@@ -123,20 +123,13 @@ public class GameFlow : MonoBehaviour
     {
         if (Current == Result.Playing) return; // controls are on the HUD
 
-        var big = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 64,
-            fontStyle = FontStyle.Bold,
-        };
-        big.normal.textColor = Current == Result.Clear ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.35f, 0.3f);
-        var small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 22 };
-        small.normal.textColor = Color.white;
+        var big = UiFont.Label(64, Current == Result.Clear ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.35f, 0.3f), TextAnchor.MiddleCenter, FontStyle.Bold);
+        var small = UiFont.Label(22, Color.white, TextAnchor.MiddleCenter);
 
-        string title = Current == Result.Clear ? (rooms != null ? "ALL ROOMS CLEAR" : "CLEAR") : "FAIL";
-        string hint = Current == Result.Clear ? "Press R to play again"
-                    : rooms != null ? $"R: retry room {rooms.CurrentRoomIndex + 1}   Shift+R: from room 1"
-                    : "Press R to restart";
+        string title = Current == Result.Clear ? (rooms != null ? "모든 봉인 복원" : "클리어") : "쓰러졌다";
+        string hint = Current == Result.Clear ? "R  다시 하기"
+                    : rooms != null ? $"R  {rooms.CurrentRoomIndex + 1}번 방 다시 하기      Shift+R  처음부터"
+                    : "R  다시 하기";
 
         float cy = Screen.height * 0.4f;
         GUI.Label(new Rect(0f, cy - 50f, Screen.width, 100f), title, big);

@@ -227,8 +227,7 @@ public class RoomManager : MonoBehaviour
     void OnGUI()
     {
         if (!roomCleared || finished) return;
-        var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 48, fontStyle = FontStyle.Bold };
-        style.normal.textColor = new Color(0.4f, 1f, 0.5f);
-        GUI.Label(new Rect(0f, Screen.height * 0.35f, Screen.width, 80f), $"ROOM {CurrentRoomIndex + 1} CLEAR", style);
+        var style = UiFont.Label(48, new Color(0.4f, 1f, 0.5f), TextAnchor.MiddleCenter, FontStyle.Bold);
+        GUI.Label(new Rect(0f, Screen.height * 0.35f, Screen.width, 80f), $"{CurrentRoomIndex + 1}번 방 정화", style);
     }
 }

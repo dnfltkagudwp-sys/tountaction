@@ -11,7 +11,7 @@ public class ClearScreen : MonoBehaviour
     [SerializeField] float tauntEvery = 3f;
 
     float timer = 1f;
-    GUIStyle big, small, hint;
+    GUIStyle title, subtitle, small, hint;
 
     void Update()
     {
@@ -36,20 +36,19 @@ public class ClearScreen : MonoBehaviour
 
     void OnGUI()
     {
-        if (big == null)
+        if (title == null)
         {
-            big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 72, fontStyle = FontStyle.Bold };
-            big.normal.textColor = new Color(1f, 0.85f, 0.35f);
-            small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 26 };
-            small.normal.textColor = Color.white;
-            hint = new GUIStyle(small) { fontSize = 20 };
-            hint.normal.textColor = new Color(1f, 1f, 1f, 0.7f);
+            title = UiFont.Label(84, new Color(1f, 0.85f, 0.35f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            subtitle = UiFont.Label(24, new Color(1f, 0.85f, 0.35f, 0.75f), TextAnchor.MiddleCenter);
+            small = UiFont.Label(26, Color.white, TextAnchor.MiddleCenter);
+            hint = UiFont.Label(20, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleCenter);
         }
 
         int t = Mathf.FloorToInt(RunStats.PlayTime);
-        float w = Screen.width, h = Screen.height;
-        GUI.Label(new Rect(0f, h * 0.12f, w, 100f), "ALL SEALS RESTORED", big);
-        GUI.Label(new Rect(0f, h * 0.12f + 95f, w, 40f), $"Time {t / 60:00}:{t % 60:00}     Deaths {RunStats.Deaths}", small);
-        GUI.Label(new Rect(0f, h * 0.88f, w, 40f), "R / Enter  Play again", hint);
+        float w = Screen.width, h = Screen.height, y = h * 0.08f;
+        GUI.Label(new Rect(0f, y, w, 110f), "이이제귀", title);
+        GUI.Label(new Rect(0f, y + 100f, w, 36f), "以夷制鬼  ·  모든 봉인을 되찾았다", subtitle);
+        GUI.Label(new Rect(0f, y + 145f, w, 40f), $"클리어 시간 {t / 60:00}:{t % 60:00}      쓰러진 횟수 {RunStats.Deaths}", small);
+        GUI.Label(new Rect(0f, h * 0.88f, w, 40f), "R / Enter  다시 하기", hint);
     }
 }
