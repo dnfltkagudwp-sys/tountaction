@@ -25,8 +25,8 @@ public class PlayerMotor : MonoBehaviour
 
     CharacterController controller;
     Health health;
-    Material bodyMat;
-    Color baseColor;
+    Material[] bodyMats;
+    Color[] baseColors;
 
     float dashTimer;
     float cooldownTimer;
@@ -47,12 +47,10 @@ public class PlayerMotor : MonoBehaviour
         if (cameraReference == null && Camera.main != null)
             cameraReference = Camera.main.transform;
 
-        var r = GetComponent<Renderer>();
-        if (r != null)
-        {
-            bodyMat = r.material;
-            baseColor = bodyMat.GetColor("_BaseColor");
-        }
+        bodyMats = BodyVisual.InstanceMaterials(BodyVisual.Find(transform));
+        baseColors = new Color[bodyMats.Length];
+        for (int i = 0; i < bodyMats.Length; i++)
+            baseColors[i] = bodyMats[i].HasProperty("_BaseColor") ? bodyMats[i].GetColor("_BaseColor") : Color.white;
     }
 
     void OnDisable()
@@ -118,7 +116,7 @@ public class PlayerMotor : MonoBehaviour
         {
             iFrameTimer = iFrameDuration;
             if (health != null) health.Invulnerable = true;
-            if (bodyMat != null) bodyMat.SetColor("_BaseColor", iFrameColor);
+            BodyVisual.SetColor(bodyMats, "_BaseColor", iFrameColor);
         }
 
         if (passThroughEnemies) IgnoreEnemyCollisions();
@@ -136,7 +134,8 @@ public class PlayerMotor : MonoBehaviour
     {
         iFrameTimer = 0f;
         if (health != null) health.Invulnerable = false;
-        if (bodyMat != null) bodyMat.SetColor("_BaseColor", baseColor);
+        for (int i = 0; i < bodyMats.Length; i++)
+            if (bodyMats[i].HasProperty("_BaseColor")) bodyMats[i].SetColor("_BaseColor", baseColors[i]);
     }
 
     void IgnoreEnemyCollisions()

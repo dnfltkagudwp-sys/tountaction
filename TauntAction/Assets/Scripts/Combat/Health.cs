@@ -37,12 +37,12 @@ public class Health : MonoBehaviour, IDamageable
     public event Action<Health> Died;
 
     float hitInvulnerableTimer;
-    Renderer bodyRenderer;
+    Renderer[] bodyRenderers;
 
     void Awake()
     {
         Current = maxHealth;
-        bodyRenderer = GetComponent<Renderer>();
+        bodyRenderers = BodyVisual.Find(transform);
     }
 
     void Update()
@@ -50,8 +50,7 @@ public class Health : MonoBehaviour, IDamageable
         if (hitInvulnerableTimer <= 0f) return;
 
         hitInvulnerableTimer -= Time.deltaTime;
-        if (bodyRenderer == null) return;
-        bodyRenderer.enabled = hitInvulnerableTimer <= 0f || Mathf.Repeat(hitInvulnerableTimer, blinkInterval * 2f) > blinkInterval;
+        BodyVisual.SetVisible(bodyRenderers, hitInvulnerableTimer <= 0f || Mathf.Repeat(hitInvulnerableTimer, blinkInterval * 2f) > blinkInterval);
     }
 
     /// <summary>Back to full HP (e.g. entering a new room). Does not revive the dead.</summary>
@@ -60,7 +59,7 @@ public class Health : MonoBehaviour, IDamageable
         if (IsDead) return;
         Current = maxHealth;
         hitInvulnerableTimer = 0f;
-        if (bodyRenderer != null) bodyRenderer.enabled = true;
+        BodyVisual.SetVisible(bodyRenderers, true);
     }
 
     public void TakeDamage(DamageInfo info)
@@ -79,7 +78,7 @@ public class Health : MonoBehaviour, IDamageable
     {
         IsDead = true;
         hitInvulnerableTimer = 0f;
-        if (bodyRenderer != null) bodyRenderer.enabled = true;
+        BodyVisual.SetVisible(bodyRenderers, true);
         Debug.Log($"[{name}] died");
         Died?.Invoke(this);
         if (destroyOnDeath) Destroy(gameObject, destroyDelay);

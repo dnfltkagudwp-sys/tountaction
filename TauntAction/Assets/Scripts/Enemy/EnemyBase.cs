@@ -94,7 +94,7 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
     protected Health health;
     protected float stateTimer;
     float naturalTimer;
-    Material bodyMat;
+    Material[] bodyMats;
     LineRenderer tauntRing;
 
     // Taunt accepted while busy: start the windup as soon as this enemy is free.
@@ -135,7 +135,8 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
 
     protected virtual void Awake()
     {
-        bodyMat = GetComponent<Renderer>().material;
+        // Looked up before any helper visuals (lane, rings) are added as children.
+        bodyMats = BodyVisual.InstanceMaterials(BodyVisual.Find(transform));
         health = GetComponent<Health>();
         health.Died += OnDied;
         tauntRing = RingVisual.Create("TauntRing", transform, tauntRingRadius, 0.15f, tauntRingColor);
@@ -496,7 +497,7 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
 
     protected float DamageFor(Health victim) => IsEnemy(victim) ? damageToEnemy : damageToPlayer;
 
-    void SetBodyColor(Color c) => bodyMat.SetColor("_BaseColor", c);
+    void SetBodyColor(Color c) => BodyVisual.SetColor(bodyMats, "_BaseColor", c);
 
     protected static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
