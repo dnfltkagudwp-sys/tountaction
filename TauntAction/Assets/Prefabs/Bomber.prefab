@@ -1,0 +1,196 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1997954399767804582
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4101396732124588569}
+  - component: {fileID: 5696138625848799019}
+  - component: {fileID: 8729943444045671248}
+  - component: {fileID: 706734514310518126}
+  - component: {fileID: 1584923864636138271}
+  - component: {fileID: 8360631073925648801}
+  m_Layer: 0
+  m_Name: Bomber
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4101396732124588569
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalScale: {x: 1.2, y: 1, z: 1.2}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &5696138625848799019
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!136 &8729943444045671248
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &706734514310518126
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: d8d151b614869e341a19dbba9845db5c, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1584923864636138271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7efb0d7af977fa45ab73e1972b91c0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Health
+  maxHealth: 4
+  hitInvulnerableTime: 0
+  blinkInterval: 0.08
+  destroyOnDeath: 1
+  destroyDelay: 0.4
+  showLabel: 1
+  labelOffset: {x: 0, y: 2.2, z: 0}
+--- !u!114 &8360631073925648801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1997954399767804582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ebe3a38bac062ed4a9ffb6bc6169663e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BomberEnemy
+  target: {fileID: 0}
+  naturalAttackEnabled: 1
+  naturalIntervalMin: 1.5
+  naturalIntervalMax: 3
+  firstAttackDelayMin: 0.5
+  firstAttackDelayMax: 1.5
+  aggroRange: 14
+  naturalNeedsClearLane: 0
+  laneBlockedResponse: 0
+  strafeProbeDistance: 2.5
+  repositionEnabled: 1
+  moveSpeed: 3.5
+  keepDistanceMin: 6
+  keepDistanceMax: 11
+  retreatWhenClose: 0
+  orbitInRange: 0
+  stepOffWalls: 1
+  wallHugDistance: 1.5
+  wallClearDistance: 2
+  separationRadius: 3
+  idleTurnSpeed: 240
+  contactDamage: 1
+  contactRadius: 1
+  tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
+  tauntRingRadius: 1.1
+  windupTime: 0.8
+  windupTurnSpeed: 360
+  aimLockTime: 0.25
+  damageToPlayer: 1
+  damageToEnemy: 2
+  recoverTime: 0.8
+  idleCooldown: 0.3
+  arenaHalfExtent: 15
+  bodyRadius: 0.6
+  idleColor: {r: 0.4, g: 0.2, b: 0.5, a: 1}
+  windupColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  attackColor: {r: 0.85, g: 0.4, b: 1, a: 1}
+  recoverColor: {r: 0.2, g: 0.1, b: 0.25, a: 1}
+  stunColor: {r: 0.3, g: 0.5, b: 1, a: 1}
+  throwRange: 12
+  flightTime: 0.9
+  arcHeight: 4
+  blastRadius: 2.5
+  aimMarkerColor: {r: 0.5, g: 0.25, b: 0.6, a: 1}
+  bombMarkerStartColor: {r: 0.7, g: 0.3, b: 0.9, a: 1}
+  bombMarkerEndColor: {r: 1, g: 0.5, b: 1, a: 1}
+  bombColor: {r: 0.25, g: 0.1, b: 0.3, a: 1}

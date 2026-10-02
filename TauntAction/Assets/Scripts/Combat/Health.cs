@@ -54,6 +54,15 @@ public class Health : MonoBehaviour, IDamageable
         bodyRenderer.enabled = hitInvulnerableTimer <= 0f || Mathf.Repeat(hitInvulnerableTimer, blinkInterval * 2f) > blinkInterval;
     }
 
+    /// <summary>Back to full HP (e.g. entering a new room). Does not revive the dead.</summary>
+    public void ResetHealth()
+    {
+        if (IsDead) return;
+        Current = maxHealth;
+        hitInvulnerableTimer = 0f;
+        if (bodyRenderer != null) bodyRenderer.enabled = true;
+    }
+
     public void TakeDamage(DamageInfo info)
     {
         if (IsDead || Invulnerable || IsHitInvulnerable || info.Amount <= 0f) return;

@@ -50,8 +50,11 @@ public class DebugHud : MonoBehaviour
             sb.AppendLine($"{e.name}: {e.StateLabel,-8} HP {h.Current:0.#}  next attack {natural}{(e.IsLaneBlocked ? "  (lane blocked)" : "")}{(e.IsTaunted ? "  TAUNTED" : "")}");
         }
         sb.Insert(0, $"Enemies alive: {alive}\n");
+        var rooms = FindAnyObjectByType<RoomManager>();
+        if (rooms != null && rooms.RoomCount > 0)
+            sb.Insert(0, $"Room {rooms.CurrentRoomIndex + 1}/{rooms.RoomCount}  Wave {Mathf.Min(rooms.WaveIndex + 1, rooms.WaveCount)}/{rooms.WaveCount}  (left in wave: {rooms.RemainingInWave})\n");
 
-        GUI.Label(new Rect(position.x, position.y, 520f, 200f), sb.ToString(), style);
+        GUI.Label(new Rect(position.x, position.y, 560f, 300f), sb.ToString(), style);
     }
 
     static string Cooldown(float t) => t > 0f ? $"{t:0.0}s" : "ready";

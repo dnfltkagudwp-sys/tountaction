@@ -5,7 +5,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Minimal win/lose + quick restart for playtesting.
-/// CLEAR when every enemy is dead, FAIL when the player dies, R reloads the scene at any time.
+/// With a RoomManager: CLEAR after the last room, R retries the current room, Shift+R restarts from room 1.
+/// Without one: CLEAR when every enemy in the scene is dead, R reloads the scene.
+/// FAIL when the player dies.
 /// </summary>
 public class GameFlow : MonoBehaviour
 {
@@ -16,6 +18,7 @@ public class GameFlow : MonoBehaviour
 
     readonly List<Health> enemies = new List<Health>();
     Health player;
+    RoomManager rooms;
     float freezeTimer = -1f;
 
     public Result Current { get; private set; } = Result.Playing;
@@ -25,6 +28,9 @@ public class GameFlow : MonoBehaviour
         var motor = FindAnyObjectByType<PlayerMotor>();
         if (motor != null) player = motor.GetComponent<Health>();
         if (player != null) player.Died += _ => Finish(Result.Fail);
+
+        rooms = FindAnyObjectByType<RoomManager>();
+        if (rooms != null) return; // rooms report their own clear
 
         // Every Health that isn't the player counts as an enemy.
         foreach (var h in FindObjectsByType<Health>())
@@ -44,6 +50,9 @@ public class GameFlow : MonoBehaviour
         Finish(Result.Clear);
     }
 
+    /// <summary>Called by RoomManager after the last room.</summary>
+    public void AllRoomsCleared() => Finish(Result.Clear);
+
     void Finish(Result r)
     {
         // First result wins (e.g. the last enemy and the player dying in the same charge).
@@ -58,7 +67,8 @@ public class GameFlow : MonoBehaviour
         var kb = Keyboard.current;
         if (kb != null && kb.rKey.wasPressedThisFrame)
         {
-            Restart();
+            if (kb.shiftKey.isPressed) RestartRun();
+            else Restart();
             return;
         }
 
@@ -69,7 +79,20 @@ public class GameFlow : MonoBehaviour
         }
     }
 
+    /// <summary>Retry the current room (or the whole run once everything is cleared).</summary>
     void Restart()
+    {
+        RoomManager.StartRoomIndex = rooms != null && Current != Result.Clear ? rooms.CurrentRoomIndex : 0;
+        Reload();
+    }
+
+    void RestartRun()
+    {
+        RoomManager.StartRoomIndex = 0;
+        Reload();
+    }
+
+    static void Reload()
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -79,7 +102,7 @@ public class GameFlow : MonoBehaviour
     {
         if (Current == Result.Playing)
         {
-            GUI.Label(new Rect(10f, 10f, 200f, 20f), "R: restart");
+            GUI.Label(new Rect(10f, 10f, 400f, 20f), rooms != null ? "R: retry room   Shift+R: restart from room 1" : "R: restart");
             return;
         }
 
@@ -93,8 +116,13 @@ public class GameFlow : MonoBehaviour
         var small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 22 };
         small.normal.textColor = Color.white;
 
+        string title = Current == Result.Clear ? (rooms != null ? "ALL ROOMS CLEAR" : "CLEAR") : "FAIL";
+        string hint = Current == Result.Clear ? "Press R to play again"
+                    : rooms != null ? $"R: retry room {rooms.CurrentRoomIndex + 1}   Shift+R: from room 1"
+                    : "Press R to restart";
+
         float cy = Screen.height * 0.4f;
-        GUI.Label(new Rect(0f, cy - 50f, Screen.width, 100f), Current == Result.Clear ? "CLEAR" : "FAIL", big);
-        GUI.Label(new Rect(0f, cy + 50f, Screen.width, 40f), "Press R to restart", small);
+        GUI.Label(new Rect(0f, cy - 50f, Screen.width, 100f), title, big);
+        GUI.Label(new Rect(0f, cy + 50f, Screen.width, 40f), hint, small);
     }
 }
