@@ -204,6 +204,9 @@ MonoBehaviour:
   contactRadius: 1
   tauntRingColor: {r: 1, g: 0.2, b: 0.9, a: 1}
   tauntRingRadius: 1.1
+  showRoleRing: 1
+  roleRingColor: {r: 0.2, g: 1, b: 0.9, a: 1}
+  roleRingRadius: 0.75
   windupTime: 0.8
   windupTurnSpeed: 360
   aimLockTime: 0.2

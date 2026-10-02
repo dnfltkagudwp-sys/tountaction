@@ -59,7 +59,14 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
 
     [Header("Taunt")]
     [SerializeField] Color tauntRingColor = new Color(1f, 0.2f, 0.9f);
+    [Tooltip("Keep this outside the role ring so both stay visible.")]
     [SerializeField] float tauntRingRadius = 1.1f;
+
+    [Header("Role ring (readability)")]
+    [Tooltip("Thin always-on floor ring in the enemy's role color, so type and position read at a glance.")]
+    [SerializeField] bool showRoleRing = true;
+    [SerializeField] Color roleRingColor = new Color(1f, 0.25f, 0.2f);
+    [SerializeField] float roleRingRadius = 0.8f;
 
     [Header("Windup (telegraph)")]
     [SerializeField] protected float windupTime = 1.0f;
@@ -96,6 +103,7 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
     float naturalTimer;
     Material[] bodyMats;
     LineRenderer tauntRing;
+    LineRenderer roleRing;
 
     // Taunt accepted while busy: start the windup as soon as this enemy is free.
     bool tauntPending;
@@ -142,6 +150,12 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
         tauntRing = RingVisual.Create("TauntRing", transform, tauntRingRadius, 0.15f, tauntRingColor);
         tauntRing.transform.localPosition = new Vector3(0f, -0.94f, 0f);
         tauntRing.gameObject.SetActive(false);
+
+        if (showRoleRing)
+        {
+            roleRing = RingVisual.Create("RoleRing", transform, roleRingRadius, 0.07f, roleRingColor);
+            roleRing.transform.localPosition = new Vector3(0f, -0.95f, 0f);
+        }
     }
 
     protected virtual void OnEnable() => TauntRegistry.Register(this);
@@ -156,6 +170,7 @@ public abstract class EnemyBase : MonoBehaviour, ITauntable
     {
         enabled = false;
         SetTaunt(false, false);
+        if (roleRing != null) roleRing.gameObject.SetActive(false);
         OnDiedExtra();
         SetBodyColor(new Color(0.1f, 0.1f, 0.1f));
     }
